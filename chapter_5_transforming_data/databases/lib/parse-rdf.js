@@ -34,8 +34,8 @@ module.exports = rdf => {
         
         const $file = $(fileElem);
 
-        console.error(`Debugging for download source ${index + 1}`)
-        console.error('$file:', $file.html()); 
+        // console.error(`Debugging for download source ${index + 1}`)
+        // console.error('$file:', $file.html()); 
         return {
             url: $file.attr('rdf:about'),
             format: (() => {
