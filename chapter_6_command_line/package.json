@@ -10,6 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "commander": "2.9.0",
+    "jq": "^1.7.2",
+    "node-jq": "^4.2.2",
     "request": "2.79.0"
   }
 }
