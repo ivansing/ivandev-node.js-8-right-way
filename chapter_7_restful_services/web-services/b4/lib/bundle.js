@@ -104,12 +104,13 @@ module.exports = (app, es) => {
     * curl -X DELETE http://<host>:<port>/api/bundle/<id>
     */
     app.delete('/api/bundle/:id', async (req, res) => {
-        const bundleUrl = `${url}${req.params.id}`;
+        const bundleUrl = `${url}/${req.params.id}`;
       
         try {
-            const bundle = await rp.delete({url: bundleUrl, json: true})
-            res.status(200).json(bundle);
+            const bundleRes = await rp.delete({url: bundleUrl, json: true})
+            res.status(200).json(bundleRes);
         } catch (esResErr) {
+            console.log('Error deleteing bundle:', esResErr);
             res.status(esResErr.statusCode || 502).json(esResErr.error);
         }
     })
@@ -118,29 +119,25 @@ module.exports = (app, es) => {
     * Remove a book from a bundle.
     * curl -X DELETE http://<host>:<port>/api/bundle/<id>/book/<pgid>
     */
-    app.delete('/api/bundle/:id/bood/:pgid', async (req, res) => {
+    app.delete('/api/bundle/:id/book/:pgid', async (req, res) => {
         const bundleUrl = `${url}${req.params.id}`;
-        const bookUrl =
-        `http://${es.host}:${es.port}` +
-        `/${es.books_index}/book/${req.params.pgid}`;
-
+        
         try {
-            const [bundleRes, bookRes] = await Promise.all([ 
-                rp({url: bundleUrl, json: true}),
-                rp({url: bookUrl, json: true})
-              ])
-
             // Extract bundle and book information from responses.
-            const {_source: bundle, _version: version} = bundleRes;
-            const {_source: book} = bookRes;
+            const {_source: bundle, _version: version} =
+             await rp({url: bundleUrl, json: true});
 
             const idx = bundle.books.findIndex(book => book.id === req.params.pqid)
-            if(idx) {
-                bundle.books.splice({
-                    id: req.params.pgid,
-                    title: book.title,
-                })
+            if(idx === -1) {
+               throw {
+                statusCode: 409,
+                error: {
+                    reason: 'Conflict - Bundle does not contain that book.'
+                }
+               }
             }
+
+            bundle.books.splice(idx, 1);
 
            const esResBody = await rp.put({
             url: bundleUrl,

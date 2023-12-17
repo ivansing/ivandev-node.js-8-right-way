@@ -46,7 +46,6 @@ const listBundles = bundles => {
 */
 const deleteBundle = async (id) => {
 
-    // TODO --- HAS TO BE REVIEWED BAD REQUEST 400
     try {
         const bundles = await getBundles();
         const idx = bundles.findIndex(bundle => bundle.id === id);
