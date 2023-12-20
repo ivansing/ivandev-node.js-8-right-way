@@ -18,6 +18,56 @@ const fetchJSON = async (url, method = 'GET') => {
   }
 }
 
+const getBundles = async () => {
+  const bundles = await fetchJSON('/api/list-bundles');
+  if(bundles.error) {
+    throw bundles.error;
+  }
+  return bundles;
+}
+
+const addBundle = async (input) => {
+  try {
+    const response = await fetch('/api/bundle', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: input})
+    });
+   
+    if(!response.ok) {
+      throw new Error(`Failed to create bundle: ${response.statusText}`)
+    }
+
+    const bundle = await response.json();
+    
+  } catch (err) {
+    console.error('Error creating bundle', err);
+  }
+  
+}
+
+const updateUIWithNewBundle = bundle => {
+  // TODO: Add bundle to UI.
+}
+
+const listBundles = bundles => {
+  const mainElement = document.createElement('div');
+  mainElement.className = 'b4-main';
+  const appendMainElement = document.body.appendChild(mainElement);
+
+  appendMainElement.innerHTML =
+    templates.addBundleForm() + templates.listBundles({bundles});
+
+
+  const form = document.createElement('form');
+  form.className = 'form';
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const name = form.querySelector('input').value;
+    addBundle(name);
+  })
+}
+
 /**
  * Show an alert to the user.
  */
@@ -42,6 +92,15 @@ const showView = async () => {
         showAlert(session.error);
       }
       break;  
+    case '#list-bundles':
+      try {
+        const bundles = await getBundles();
+        listBundles(bundles);
+      } catch (err) {
+        showAlert(err);
+        window.location.hash = '#welcome';        
+      } 
+      break; 
     default:
       // Unrecognized view.
       throw Error(`Unrecognized view: ${view}`);

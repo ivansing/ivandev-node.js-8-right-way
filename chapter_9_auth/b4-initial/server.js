@@ -83,14 +83,15 @@ app.get('/auth/twitter/callback', passport.authenticate('twitter', {
 passport.use(new GoogleStrategy({
   clientID: nconf.get('auth:google:clientID'),
   clientSecret: nconf.get('auth:google:clientSecret'),
-  callbackURL: new URL('/auth/google/callback', serviceUrl).href,
+  callbackURL: new URL('https://b4.example.com:60900/auth/google/callback', serviceUrl).href,
   scope: 'https://www.googleapis.com/auth/plus.login',
 }, (accessToken, refreshToken, profile, done) => done(null, profile)));
 
-app.get('/auth/google', passport.authenticate('google', {scope: ['profile email']}));
-app.get('auth/google/callback', passport.authenticate('google', (req,res) => {
-  res.redirect('/');
-}))
+app.get('/auth/google', passport.authenticate('google', {scope: ['profile']}));
+app.get('/auth/google/callback', passport.authenticate('google', {
+  successRedirect: '/',
+  failureRedirect: '/', 
+}));
 app.get('/auth/google/callback', passport.authenticate('google', ))
 
  

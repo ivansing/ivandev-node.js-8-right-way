@@ -6,6 +6,7 @@ const rp = require('request-promise');
 const getUserKey = ({user: {provider, id}}) => `${provider}-${id}`;
 
 
+
 module.exports = es => {
     const url = `http://${es.host}:${es.port}/${es.bundles_index}/bundle`;
     const router = express.Router();
@@ -31,7 +32,7 @@ module.exports = es => {
             const esReqBody = {
                 size: 1000,
                 query: {
-                    math: {
+                    match: {
                         userKey: getUserKey(req),
                     }
                 },
@@ -51,6 +52,47 @@ module.exports = es => {
             res.status(200).json(bundles);
         } catch (err) {
             res.status(err.statusCode || 502).json(err.error || err)
+        }
+    })
+
+    /**
+    * Create a new bundle with the specified name.
+    */
+    router.post('/bundle', async (req, res) => {
+        try {
+            const bundle = {
+                name: req.query.name || '',
+                userKey: getUserKey(req),
+                books: [],
+            }
+
+            const esResBody = await rp.post({url, body: bundle, json: true});
+            res.status(201).json(esResBody);
+        } catch (err) {
+            res.status(err.statusCode || 502).json(err.error || err);
+        }
+    })
+
+    /**
+    * Retrieve a given bundle.
+    */
+    router.get('/bundle/:id', async (req, res) => {
+        try {
+            const options = {
+                url: `${url}/${req.params.id}`,
+                json: true,
+            };
+
+            const {_source: bundle} = await rp(options);
+            if(bundle.userKey !== getUserKey(req)) {
+                throw {
+                    statusCode: 403,
+                    error: 'You are not authorized to view this bundle.',
+                };
+            }
+            res.status(200).json({id: req.params.id, bundle});
+        } catch (err) {
+            res.status(err.statusCode || 502).json(err.error || err);
         }
     })
 
