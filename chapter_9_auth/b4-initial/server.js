@@ -9,6 +9,7 @@ const expressSession = require('express-session');
 const passport = require('passport');
 const FacebookStrategy = require('passport-facebook').Strategy;
 const TwitterStrategy = require('passport-twitter').Strategy;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const nconf = require('nconf');
 const https = require('https');
 const fs = require('fs');
@@ -26,8 +27,10 @@ nconf
   .file(nconf.get('conf'));
 
 const serviceUrl = new URL(nconf.get('serviceUrl'));
-const servicePort =
-    serviceUrl.port || (serviceUrl.protocol === 'https:' ? 443 : 80);
+console.log(serviceUrl,'SERVICE URL')
+const servicePort = serviceUrl.port || (serviceUrl.protocol === 'https:' ? 60900 : 80);
+
+console.log(servicePort, "SERVICE PORT");    
 
 const app = express();
 
@@ -47,45 +50,62 @@ if(isDev) {
   // Use Redistore in production mode.
 }
 
-// Password Authentication
-// passport.serializeUser((profile, done) => done(null, {
-//   id: profile.id,
-//   provider: profile.provider,
-// }));
-// passport.deserializeUser((user, done) => done(null, user));
-// app.use(passport.initialize());
-// app.use(passport.session());
+app.use(passport.initialize());
+app.use(passport.session());
 
-// passport.use(new FacebookStrategy({
-//   clientID: nconf.get('auth:facebook:appID'),
-//   clientSecret: nconf.get('auth:facebook:appSecret'),
-//   callbackURL: new URL('/auth/facebook/callback', serviceUrl).href,
-//   }, (accessToken, refreshToken, profile, done) => done(null, profile)));
+// Facebook login flow
+passport.use(new FacebookStrategy({
+  clientID: nconf.get('auth:facebook:appID'),
+  clientSecret: nconf.get('auth:facebook:appSecret'),
+  callbackURL: new URL('/auth/facebook/callback', serviceUrl).href,
+}, (accessToken, refreshToken, profile, done) => done(null, profile)));
 
-// app.get('/auth/facebook', passport.authenticate('facebook'));
-// app.get('/auth/facebook/callback', passport.authenticate('facebook', {
-//   successRedirect: '/',
-//   failureRedirect: '/',
-// }))  
+app.get('/auth/facebook', passport.authenticate('facebook'));
+app.get('/auth/facebook/callback', passport.authenticate('facebook', {
+  successRedirect: '/',
+  failureRedirect: '/',
+}));
 
+// Twitter login
+passport.use(new TwitterStrategy({
+  consumerKey: nconf.get('auth:twitter:consumerKey'),
+  consumerSecret: nconf.get('auth:twitter:consumerSecret'),
+  callbackURL: new URL('/auth/twitter/callback', serviceUrl).href,
+}, (accessToken, tokenSecret, profile, done) => done(null, profile)));
 
-// passport.use(new TwitterStrategy({
-//   consumerKey: nconf.get('auth:twitter:consumerKey'),
-//   consumerSecret: nconf.get('auth:twitter:consumerSecret'),
-//   accessToken: nconf.get('auth:twitter:accessToken'),
-//   secretToken: nconf.get('auth:twitter:secretToken'),
-//   callbackURL: new URL('/auth/twitter/callback', serviceUrl).href,
-// }, (accessToken, tokenSecret, profile, done) => done(null, profile)));
+app.get('/auth/twitter', passport.authenticate('twitter'));
+app.get('/auth/twitter/callback', passport.authenticate('twitter', {
+  successRedirect: '/',
+  failureRedirect: '/',
+}));
 
-// app.get('/auth/twitter', passport.authenticate('twitter'));
-// app.get('/auth/twitter/callback', passport.authenticate('twitter', {
-//   successRedirect: '/',
-//   failureRedirect: '/',
-// }));
+// Google login oauth
+passport.use(new GoogleStrategy({
+  clientID: nconf.get('auth:google:clientID'),
+  clientSecret: nconf.get('auth:google:clientSecret'),
+  callbackURL: new URL('/auth/google/callback', serviceUrl).href,
+  scope: 'https://www.googleapis.com/auth/plus.login',
+}, (accessToken, refreshToken, profile, done) => done(null, profile)));
+
+app.get('/auth/google', passport.authenticate('google', {scope: ['profile email']}));
+app.get('auth/google/callback', passport.authenticate('google', (req,res) => {
+  res.redirect('/');
+}))
+app.get('/auth/google/callback', passport.authenticate('google', ))
+
+ 
+
+passport.serializeUser((profile, done) => done(null, {
+  id: profile.id,
+  provider: profile.provider,
+}));
+passport.deserializeUser((user, done) => done(null, user));
+
 
 app.use(morgan('dev'));
 
 app.get('/api/version', (req, res) => res.status(200).json(pkg.version));
+
 
 // Serve webpack assets.
 if (isDev) {
@@ -100,32 +120,36 @@ if (isDev) {
   app.use(express.static('dist'));
 }
 
+
+
 app.get('/api/session', (req, res) => {
   const session = {auth: req.isAuthenticated()};
   console.log(session)
   res.status(200).json(session);
 })
 
+
+
 app.get('/auth/signout', (req, res) => {
   req.logout();
   res.redirect('/');
 })
 
-const httpsOptions = {
-  key: fs.readFileSync('./cert2/localhost/localhost.decrypted.key'),
-  cert: fs.readFileSync('./cert2/localhost/localhost.crt')
-}
-
 if(isDev) {
-  const httpsServer = https.createServer(httpsOptions, app);
+  const privateKey = fs.readFileSync('./cert/localhost/localhost.decrypted.key');
+  const certificate = fs.readFileSync('./cert/localhost/localhost.crt');
+  const credentials = {key:privateKey, cert: certificate};
+
+  const httpsServer = https.createServer(credentials, app);
   httpsServer.listen(servicePort, () => {
     console.log('HTTPS Server running on port 60900');
+    app.use('/api', require('./lib/bundle.js')(nconf.get('es')));
   })
-  
 } else {
-  app.listen(servicePort, () => {
-    console.log('Ready Prod')
-  })
+   app.listen(servicePort,() => console.log(`Listening on on port: ${servicePort}`))
 }
+
+
+
 
 
