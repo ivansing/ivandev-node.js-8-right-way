@@ -46,8 +46,17 @@ if(isDev) {
     store: new FileStore(),
   }));
 } else {
-
   // Use Redistore in production mode.
+  const Redistore = require('connect-redis')(expressSession);
+  app.use(expressSession({
+    resave: false,
+    saveUninitialized: false,
+    secret: nconf.get('redis:secret'),
+    store: new Redistore({
+      host: nconf.get('redis:host'),
+      port: nconf.get('redis:port'),
+    }),
+  }));
 }
 
 app.use(passport.initialize());
@@ -137,6 +146,16 @@ app.get('/auth/signout', (req, res) => {
 })
 
 if(isDev) {
+  // const privateKey = fs.readFileSync('./cert/localhost/localhost.decrypted.key');
+  // const certificate = fs.readFileSync('./cert/localhost/localhost.crt');
+  // const credentials = {key:privateKey, cert: certificate};
+
+  // const httpsServer = https.createServer(credentials, app);
+  // httpsServer.listen(servicePort, () => {
+  //   console.log('HTTPS Server running on port 60900');
+  //   app.use('/api', require('./lib/bundle.js')(nconf.get('es')));
+  // })
+} else {
   const privateKey = fs.readFileSync('./cert/localhost/localhost.decrypted.key');
   const certificate = fs.readFileSync('./cert/localhost/localhost.crt');
   const credentials = {key:privateKey, cert: certificate};
@@ -146,8 +165,7 @@ if(isDev) {
     console.log('HTTPS Server running on port 60900');
     app.use('/api', require('./lib/bundle.js')(nconf.get('es')));
   })
-} else {
-   app.listen(servicePort,() => console.log(`Listening on on port: ${servicePort}`))
+   
 }
 
 

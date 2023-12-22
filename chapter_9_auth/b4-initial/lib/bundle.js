@@ -66,8 +66,10 @@ module.exports = es => {
                 books: [],
             }
 
-            const esResBody = await rp.post({url, body: bundle, json: true});
-            res.status(201).json(esResBody);
+             await rp.post({url, body: bundle, json: true})
+                                      .then(esResBody => res.status(201).json(esResBody))
+                                      .catch(({error}) => res.status(error.status || 502).json(error));
+            // res.status(201).json(esResBody);
         } catch (err) {
             res.status(err.statusCode || 502).json(err.error || err);
         }

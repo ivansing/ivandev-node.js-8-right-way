@@ -4,3 +4,4 @@ sessions/
 cert/
 cert2/
 development.config.json
+production.config.json
