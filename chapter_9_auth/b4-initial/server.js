@@ -162,7 +162,7 @@ if(isDev) {
 
   const httpsServer = https.createServer(credentials, app);
   httpsServer.listen(servicePort, () => {
-    console.log('HTTPS Server running on port 60900');
+    console.log('HTTPS Server running on port 60900 Production');
     app.use('/api', require('./lib/bundle.js')(nconf.get('es')));
   })
    

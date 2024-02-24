@@ -10,6 +10,7 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ExtractTxtPlugin = require('extract-text-webpack-plugin');
 
 module.exports = {
   entry: './app/index.ts',
@@ -27,7 +28,14 @@ module.exports = {
     },{
       test: /\.(png|woff|woff2|eot|ttf|svg)$/,
       loader: 'url-loader?limit=100000',
-    }]
+    },
+     {
+      test: /\.css/,
+      use : ExtractTxtPlugin.extract({
+        fallback: 'style-loader',
+        use: ['css-loader']
+      })
+     }]
   },
   plugins: [
     new HtmlWebpackPlugin({
@@ -37,5 +45,6 @@ module.exports = {
       $: 'jquery',
       jQuery: 'jquery'
     }),
+    new ExtractTxtPlugin('styles.css'),
   ],
 };
